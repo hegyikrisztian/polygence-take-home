@@ -47,7 +47,7 @@ class ReviewStudentPostTestCase(TestCase):
         self.assertEqual(response.data["error"], "Response already recorded")
 
 
-class ReviewStudentPatchTestCase(TestCase):
+class ReviewStudentRejectPatchTestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.mentor = Mentor.objects.create(name="Alex", email="alex@example.com")
@@ -58,14 +58,14 @@ class ReviewStudentPatchTestCase(TestCase):
     def test_records_decline_reason(self):
         response = self.client.patch(
             f"/api/review-student/{self.proposal.uuid}/",
-            {"reason": {"no_good_fit": True}, "match_rating": 3},
+            {"reason": {"no_good_fit": True}, "match_rating": 3}, # patching `match_rating` in case of StudentProposal.REJECT is not allowed
             format="json",
         )
 
         self.assertEqual(response.status_code, 200)
         self.proposal.refresh_from_db()
         self.assertEqual(self.proposal.response["reason"], {"no_good_fit": True})
-        self.assertEqual(self.proposal.response["match_rating"], 3)
+        self.assertTrue("match_rating" not in self.proposal.response)
 
     def test_rejects_second_reason(self):
         self.client.patch(
@@ -82,6 +82,43 @@ class ReviewStudentPatchTestCase(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["error"], "Reason already recorded")
+
+
+class ReviewStudentAcceptPatchTestCase(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.mentor = Mentor.objects.create(name="Alex", email="alex@example.com")
+        self.mentor_request = MentorRequest.objects.create(student_name="Jamie")
+        self.proposal = StudentProposal.objects.create(mentor=self.mentor, mentor_request=self.mentor_request)
+        StudentProposalService.update_response(self.proposal, StudentProposal.ACCEPT)
+
+    def test_records_accept_match_rating(self):
+        response = self.client.patch(
+            f"/api/review-student/{self.proposal.uuid}/",
+            {"reason": {"no_good_fit": True}, "match_rating": 3}, # patching `reason` in case of StudentProposal.ACCEPT is not allowed
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.proposal.refresh_from_db()
+        self.assertEqual(self.proposal.response["match_rating"], 3)
+        self.assertTrue("reason" not in self.proposal.response)
+
+    def test_accept_second_match_rating(self):
+        self.client.patch(
+            f"/api/review-student/{self.proposal.uuid}/",
+            {"match_rating": 10},
+            format="json",
+        )
+
+        response = self.client.patch(
+            f"/api/review-student/{self.proposal.uuid}/",
+            {"match_rating": 10},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["error"], "Match rating already recorded")
 
 
 class ProposalActiveTestCase(TestCase):
