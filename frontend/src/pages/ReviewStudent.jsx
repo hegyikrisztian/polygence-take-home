@@ -34,7 +34,6 @@ export function ReviewStudent() {
       })
       .catch((err) => {
         if (err.response && err.response.data?.error === "Response already recorded") {
-          console.log(err.response);
           setResponseRecorded(true);
         } else {
           setError(true);
