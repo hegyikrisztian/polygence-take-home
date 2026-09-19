@@ -31,10 +31,10 @@ class StudentProposalService:
     def update_reason_and_rating(student_proposal: StudentProposal, reason, rating) -> None:
 
         # This should not accept "reason" if our respnse is "accept" and vica versa
-        if rating is not None:
+        if rating is not None and student_proposal.accepted:
             student_proposal.response["match_rating"] = rating
 
-        if reason:
+        if reason and student_proposal.rejected:
             student_proposal.response["reason"] = reason
 
         student_proposal.save(update_fields=["response", "updated_at"])
