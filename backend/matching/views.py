@@ -34,8 +34,12 @@ def review_student(request, current):
         reason = request.data.get("reason")
         match_rating = request.data.get("match_rating")
 
+        # If we already have any reason or match_rating, do not patch in the given value
         if "reason" in student_proposal.response:
             return Response({"error": "Reason already recorded"}, 400)
+
+        if "match_rating" in student_proposal.response:
+            return Response({"error": "Match rating already recorded"}, 400)
 
         StudentProposalService.update_reason_and_rating(student_proposal, reason, match_rating)
         return Response({"message": "Reason recorded", "success": True})
